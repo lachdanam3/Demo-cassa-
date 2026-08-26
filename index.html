@@ -1,216 +1,38 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giesse Scampoli - POS AI Demo</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        header { grid-column: span 2; background-color: #a81c1c; color: white; padding: 15px; border-radius: 8px; text-align: center; }
-        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .full-width { grid-column: span 2; }
-        button { background-color: #e53935; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px; }
-        button:hover { background-color: #b71c1c; }
-        video { width: 100%; height: auto; background-color: #000; border-radius: 5px; transform: scaleX(1); }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .alert { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; border-radius: 4px; margin-top: 10px; font-weight: bold; display: none; }
-        .popup-ambiguita { display: none; background-color: #e8f5e9; border-left: 5px solid #2e7d32; padding: 15px; border-radius: 4px; margin-top: 10px; }
-        .btn-scelta { background-color: #2e7d32; display: inline-block; width: auto; margin-right: 10px; margin-top: 10px; }
-        .btn-scelta:hover { background-color: #1b5e20; }
-        .badge { background: #3f51b5; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <header>
-        <h1>GIESSE SCAMPOLI - POS INTELLIGENTE v2.0</h1>
-        <p>Integrazione Sperimentale AI Google Vision & Sistema 2bit - Filiale di Padova</p>
-    </header>
-
-    <!-- Scanner Live -->
-    <div class="box">
-        <h2>📷 Scanner AI di Cassa LIVE</h2>
-        <p style="font-size: 14px; color: #666;">Usa lo smartphone in HTTPS o localhost per attivare la telecamera posteriore.</p>
-        <button id="btn-camera" onclick="iniziaScansione()">ATTIVA INTELLIGENZA ARTIFICIALE</button>
-        <video id="webcam" autoplay playsinline></video>
-        
-        <div style="margin-top:15px; font-size: 18px;">
-            <strong>🎯 Rilevato:</strong> <span id="rilevato-testo">In attesa dell'avvio...</span>
-        </div>
-        
-        <!-- Area Risoluzione Ambiguità e Alert -->
-        <div id="alert-cloud" class="alert"></div>
-        
-        <div id="popup-scelte" class="popup-ambiguita">
-            <h3 style="margin-top:0;">Risoluzione Ambiguità AI</h3>
-            <p id="domanda-scelta"></p>
-            <div id="contenitore-bottoni"></div>
-        </div>
-    </div>
-
-    <!-- Scontrino Virtuale -->
-    <div class="box">
-        <h2>🧾 Scontrino Virtuale 2bit</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Articolo / Descrizione</th>
-                    <th>Modalità</th>
-                    <th>Totale</th>
-                </tr>
-            </thead>
-            <tbody id="corpo-scontrino">
-                <tr id="riga-vuota"><td colspan="3" style="text-align:center; color:#888;">Scontrino vuoto. Seleziona una classe sotto per simulare il riconoscimento.</td></tr>
-            </tbody>
-        </table>
-        <h3 style="text-align: right; margin-top: 20px;">TOTALE CONTO: <span id="totale-conto">0.00</span> €</h3>
-    </div>
-
-    <!-- Pannello BI e Simulatore Classi -->
-    <div class="box full-width">
-        <h2>📊 Controllo di Rete e Business Intelligence (Pianificazione)</h2>
-        <div style="background-color: #e8eaf6; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-            <strong>💡 BI Predittiva:</strong> Mancano circa 20 giorni alla fiera <strong>Abilmente Autunno</strong>. Il sistema suggerisce di monitorare i lotti di filati caldi e minuterie.
-        </div>
-        
-        <h3>🧪 Simulatore di Riconoscimento (Clicca per testare le 12 classi reali)</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-            <button class="btn-scelta" onclick="simulaRilevamento(1)">1. Toys lumache (Bimbi)</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(2)">2. Gobelin Kandinsky</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(3)">3. Toscana gallos fango</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(4)">4. Toscana cannes fango</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(5)">5. Filato tubo lux (Lotto 17)</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(6)">6. Filato lyocenn (Lotto 197)</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(7)">7. Filo Guttermann 931</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(8)">8. Bottone Tipo 1</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(11)">11. Coja colibrì (Colore?)</button>
-            <button class="btn-scelta" onclick="simulaRilevamento(12)">12. Articolo Gatto (Formato?)</button>
-        </div>
-    </div>
-</div>
-
-<script>
-let streamVideo = null;
-let totaleAttuale = 0;
-
-async function iniziaScansione() {
-    const video = document.getElementById('webcam');
-    const bottone = document.getElementById('btn-camera');
-    
-    // Configurazione per forzare la fotocamera posteriore dello smartphone
-    const vincoli = {
-        video: { facingMode: { ideal: "environment" } },
-        audio: false
-    };
-
-    try {
-        streamVideo = await navigator.mediaDevices.getUserMedia(vincoli);
-        video.srcObject = streamVideo;
-        video.setAttribute("playsinline", true); 
-        video.play();
-        document.getElementById('rilevato-testo').innerText = "AI in ascolto... Inquadra un articolo o usa il simulatore in basso.";
-        bottone.style.backgroundColor = "#2e7d32";
-        bottone.innerText = "FOTOCAMERA ATTIVA ✔";
-    } catch (errore) {
-        console.error("Errore fotocamera:", errore);
-        alert("Impossibile accedere alla fotocamera.\n\nRicorda che lo smartphone blocca la fotocamera se la pagina non è caricata sotto protocollo sicuro HTTPS o se non hai accettato i permessi di privacy.");
+    }
+    else if (tag.includes("guttermann") || tag.includes("931")) {
+        aggiungiAoScontrino('Filo Guttermann 931 250mt', 'Diretto', 3.10);
+    }
+    else if (tag.includes("bottone")) {
+        aggiungiAoScontrino('Bottone Riconoscimento Geometrico', 'Unitario', 0.60);
+    }
+    else if (tag.includes("cuja") || tag.includes("colibrì")) {
+        bloccoAttivo = true;
+        popupScelte.style.display = "block";
+        domandaScelta.innerText = "🛑 TRABOCCHETTO COLORE: Il sistema richiede il Check Umano obbligatorio. Seleziona la variante:";
+        contenitoreBottoni.innerHTML = `
+            <button class="btn-scelta" style="background-color:#0d47a1;" onclick="aggiungiAoScontrino('Cuja Colibrì - Variante Blu', 'Manuale', 18.00); sbloccaCassa();">Variante BLU</button>
+            <button class="btn-scelta" style="background-color:#4a148c;" onclick="aggiungiAoScontrino('Cuja Colibrì - Variante Bordeaux', 'Manuale', 18.00); sbloccaCassa();">Variante BORDEAUX</button>
+        `;
+    }
+    else if (tag.includes("gatto") || tag.includes("pannello") || tag.includes("cuscino")) {
+        bloccoAttivo = true;
+        popupScelte.style.display = "block";
+        domandaScelta.innerText = "🛑 TRABOCCHETTO CONFEZIONE: Seleziona l'articolo corretto passato in cassa:";
+        contenitoreBottoni.innerHTML = `
+            <button class="btn-scelta" onclick="aggiungiAoScontrino('Pannello Gatto a Metro', 'Taglio', 12.00); sbloccaCassa();">Pannello a Metro (12.00€)</button>
+            <button class="btn-scelta" onclick="aggiungiAoScontrino('Cuscino Finito Imbottito Gatto', 'Finito', 22.00); sbloccaCassa();">Cuscino Finito Imbottito (22.00€)</button>
+        `;
     }
 }
 
-function aggiungiAoScontrino(descrizione, modalita, prezzo) {
-    const corpo = document.getElementById('corpo-scontrino');
-    const rigaVuota = document.getElementById('riga-vuota');
-    if(rigaVuota) rigaVuota.remove();
-    
-    const nuovaRiga = document.createElement('tr');
-    nuovaRiga.innerHTML = `<td>${descrizione}</td><td><span class="badge">${modalita}</span></td><td>${prezzo.toFixed(2)} €</td>`;
-    corpo.appendChild(nuovaRiga);
-    
-    totaleAttuale += prezzo;
-    document.getElementById('totale-conto').innerText = totaleAttuale.toFixed(2);
-}
-
-function simulaRilevamento(classeId) {
-    const testoRilevato = document.getElementById('rilevato-testo');
-    const alertCloud = document.getElementById('alert-cloud');
-    const popupScelte = document.getElementById('popup-scelte');
-    const contenitoreBottoni = document.getElementById('contenitore-bottoni');
-    const domandaScelta = document.getElementById('domanda-scelta');
-    
-    // Resetta stati precedenti
-    alertCloud.style.display = "none";
-    popupScelte.style.display = "none";
-    contenitoreBottoni.innerHTML = "";
-
-    switch(classeId) {
-        case 1:
-            testoRilevato.innerText = "Toys lumache e arcobaleni";
-            popupScelte.style.display = "block";
-            domandaScelta.innerText = "Seleziona la modalità di vendita per il tessuto Bimbi Premium:";
-            contenitoreBottoni.innerHTML = `
-                <button class="btn-scelta" onclick="aggiungiAoScontrino('Tessuto Bimbi Premium', 'Al Metro', 14.50); document.getElementById('popup-scelte').style.display='none';">Vendita al Metro</button>
-                <button class="btn-scelta" onclick="aggiungiAoScontrino('Tessuto Bimbi Premium', 'Cesta Outlet', 5.00); document.getElementById('popup-scelte').style.display='none';">Peso Cesta Outlet</button>
-            `;
-            break;
-        case 2:
-            testoRilevato.innerText = "Gobelin Kandinsky";
-            popupScelte.style.display = "block";
-            domandaScelta.innerText = "Seleziona la modalità di vendita per Tessuto Arredo Artistico:";
-            contenitoreBottoni.innerHTML = `
-                <button class="btn-scelta" onclick="aggiungiAoScontrino('Gobelin Arredo Artistico', 'Al Metro', 22.00); document.getElementById('popup-scelte').style.display='none';">Vendita al Metro</button>
-                <button class="btn-scelta" onclick="aggiungiAoScontrino('Gobelin Arredo Artistico', 'Cesta Outlet', 8.50); document.getElementById('popup-scelte').style.display='none';">Peso Cesta Outlet</button>
-            `;
-            break;
-        case 3:
-            testoRilevato.innerText = "Toscana gallos fango";
-            aggiungiAoScontrino('Tessuto Tinta Unita (Toscana)', 'Al Metro', 12.00);
-            break;
-        case 4:
-            testoRilevato.innerText = "Toscana cannes fango";
-            aggiungiAoScontrino('Tessuto Fantasia (Cannes)', 'Al Metro', 13.50);
-            break;
-        case 5:
-            testoRilevato.innerText = "Filato tubo lux col8 lot17";
-            alertCloud.style.display = "block";
-            alertCloud.innerHTML = "⚠️ ALERT CLOUD: Lotto 17 esaurito a Padova. Disponibile: 6pz a Mestrino, 12pz a Vicenza.";
-            aggiungiAoScontrino('Filato Tubo Lux Col8 Lot17', 'Unità', 4.80);
-            break;
-        case 6:
-            testoRilevato.innerText = "Filato lyocenn col 12 lot 197";
-            alertCloud.style.display = "block";
-            alertCloud.innerHTML = "ℹ️ INFO RETE: Disponibilità rete: 45 pezzi totali nelle filiali Venete.";
-            aggiungiAoScontrino('Filato Lyocenn Col12 Lot197', 'Unità', 5.20);
-            break;
-        case 7:
-            testoRilevato.innerText = "Filo 250mt guttermann 931";
-            aggiungiAoScontrino('Filo Guttermann 931 250mt', 'Diretto', 3.10);
-            break;
-        case 8:
-            testoRilevato.innerText = "Riconosciuto: Bottone Classico";
-            aggiungiAoScontrino('Bottone Riconoscimento Geometrico', 'Unitario', 0.60);
-            break;
-        case 11:
-            testoRilevato.innerText = "Coja colibrì (Rilevamento Ambiguità Colore)";
-            popupScelte.style.display = "block";
-            domandaScelta.innerText = "🛑 TRABOCCHETTO COLORE: Il sistema richiede il Check Umano obbligatorio. Seleziona la variante visiva corretta:";
-            contenitoreBottoni.innerHTML = `
-                <button class="btn-scelta" style="background-color:#0d47a1;" onclick="aggiungiAoScontrino('Coja Colibrì - Variante Blu', 'Manuale', 18.00); document.getElementById('popup-scelte').style.display='none';">Variante BLU</button>
-                <button class="btn-scelta" style="background-color:#4a148c;" onclick="aggiungiAoScontrino('Coja Colibrì - Variante Bordeaux', 'Manuale', 18.00); document.getElementById('popup-scelte').style.display='none';">Variante BORDEAUX</button>
-            `;
-            break;
-        case 12:
-            testoRilevato.innerText = "Articolo Tema Gatto (Rilevamento Ambiguità Confezione)";
-            popupScelte.style.display = "block";
-            domandaScelta.innerText = "🛑 TRABOCCHETTO CONFEZIONE: Seleziona l'articolo corretto passato in cassa:";
-            contenitoreBottoni.innerHTML = `
-                <button class="btn-scelta" onclick="aggiungiAoScontrino('Pannello Gatto a Metro', 'Taglio', 12.00); document.getElementById('popup-scelte').style.display='none';">Pannello a Metro (12.00€)</button>
-                <button class="btn-scelta" onclick="aggiungiAoScontrino('Cuscino Finito Imbottito Gatto', 'Finito', 22.00); document.getElementById('popup-scelte').style.display='none';">Cuscino Finito Imbottito (22.00€)</button>
-            `;
-            break;
-    }
+function sbloccaCassa() {
+    document.getElementById('popup-scelte').style.display = 'none';
+    setTimeout(() => {
+        bloccoAttivo = false;
+        ultimoArticoloRilevato = "";
+    }, 3000);
 }
 </script>
+
+</body>
+</html>
