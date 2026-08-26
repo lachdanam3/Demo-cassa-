@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giesse Scampoli - POS AI Demo v2.0</title>
+    <title>Giesse Scampoli - POS Vision AI Real-Time</title>
     <script src="https://jsdelivr.net"></script>
     <script src="https://jsdelivr.net"></script>
     <style>
@@ -23,34 +23,31 @@
         .btn-scelta { background-color: #2e7d32; display: inline-block; width: auto; margin-right: 10px; margin-top: 10px; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-scelta:hover { background-color: #1b5e20; }
         .badge { background: #3f51b5; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; }
-        #btn-conferma { display: none; background-color: #ff9800; margin-top: 10px; }
-        #btn-conferma:hover { background-color: #f57c00; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>GIESSE SCAMPOLI - POS INTELLIGENTE v2.0</h1>
-        <p>Integrazione Sperimentale AI Google Vision & Schema 2bit - Filiale di Padova</p>
+        <h1>GIESSE SCAMPOLI - POS INTELLIGENTE AUTOMATICO</h1>
+        <p>Integrazione Reale Real-Time Google Teachable Machine - Filiale di Padova</p>
     </header>
 
     <div class="box">
-        <h2>📷 Scanner AI di Cassa LIVE WEBCAM</h2>
-        <p style="font-size: 14px; color: #666;">L'interfaccia si collegherà alla webcam del PC per analizzare i prodotti in tempo reale.</p>
-        <button id="btn-camera" onclick="iniziaScansione()">ATTIVA INTELLIGENZA ARTIFICIALE</button>
+        <h2>📷 Scanner Vision AI (Riconoscimento Reale)</h2>
+        <p style="font-size: 14px; color: #666;">Il sistema attende il caricamento dei file di Google prima di accendere i sensori video per garantire la stabilità di lettura.</p>
+        <button id="btn-camera" onclick="avviaProcessoSincronizzato()">AVVIA PROCESSO DI SCANSIONE REAL-TIME</button>
         <video id="webcam" autoplay playsinline muted></video>
         
         <div style="margin-top:15px; font-size: 18px;">
-            <strong>🎯 Rilevato:</strong> <span id="rilevato-testo">-</span>
-            <button id="btn-conferma" onclick="confermaEApplicaCheck()">CONFERMA E APPLICA CHECK</button>
+            <strong>🎯 Analisi Visiva:</strong> <span id="rilevato-testo">In attesa dell'avvio automatizzato...</span>
         </div>
         
         <div id="alert-cloud" class="alert"></div>
         
         <div id="popup-scelte" class="popup-ambiguita">
             <h3>Risoluzione Ambiguità AI</h3>
-            <p id="domanda-scelta">Seleziona la variante corretta per scaricare la giusta riga di magazzino:</p>
+            <p id="domanda-scelta">Seleziona la variante corretta per magazzino e cassa:</p>
             <div id="contenitore-bottoni"></div>
         </div>
     </div>
@@ -58,78 +55,67 @@
     <div class="box">
         <h2>🧾 Scontrino Virtuale 2bit</h2>
         <table>
-            <thead>
-                <tr>
-                    <th>Articolo / Descrizione</th>
-                    <th>Modalità</th>
-                    <th>Totale</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Articolo / Descrizione</th><th>Modalità</th><th>Totale</th></tr></thead>
             <tbody id="corpo-scontrino">
-                <tr id="riga-vuota"><td colspan="3" style="text-align:center; color:#888;">Scontrino vuoto. Inquadra un articolo reale per iniziare.</td></tr>
+                <tr id="riga-vuota"><td colspan="3" style="text-align:center; color:#888;">Nessun articolo. Inquadra un prodotto reale per inserire a scontrino.</td></tr>
             </tbody>
         </table>
         <h3 style="text-align: right; margin-top: 20px;">TOTALE CONTO: <span id="totale-conto">0.00</span> €</h3>
-    </div>
-
-    <div class="box full-width">
-        <h2>📊 Controllo di Rete e Scorte</h2>
-        <div style="background-color: #e8eaf6; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-            <strong>💡 Business Intelligence Integrata (Pianificazione):</strong><br>
-            Mancano circa 20 giorni alla fiera <strong>Abilmente Autunno</strong>. Il sistema suggerisce di monitorare i lotti di filati e minuterie metalliche.
-        </div>
     </div>
 </div>
 
 <script>
 const URL_MODELLO = "https://withgoogle.com";
-let model, webcamCtx, maxPredictions;
-let totaleAttuale = 0, ultimoArticoloRilevato = "", bloccoAttivo = false, classeCorrenteRilevata = "";
+let model = null, maxPredictions = 0;
+let totaleAttuale = 0, ultimoArticoloRilevato = "", bloccoAttivo = false;
 
-async function iniziaScansione() {
+async function avviaProcessoSincronizzato() {
     const bottone = document.getElementById('btn-camera');
-    const videoElement = document.getElementById("webcam");
-    document.getElementById('rilevato-testo').innerText = "Caricamento AI Cloud...";
+    document.getElementById('rilevato-testo').innerText = "1/2 - Download dei file dell'algoritmo da Google Cloud...";
     bottone.disabled = true;
+    bottone.style.backgroundColor = "#ff9800";
+
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        videoElement.srcObject = stream;
-        await videoElement.play();
-        
+        // Forza l'attesa del caricamento completo del modello neurale prima di toccare la fotocamera
         model = await tmImage.load(URL_MODELLO + "model.json", URL_MODELLO + "metadata.json");
         maxPredictions = model.getTotalClasses();
         
-        bottone.style.backgroundColor = "#2e7d32";
-        bottone.innerText = "FOTOCAMERA ATTIVA ✔";
-        document.getElementById('rilevato-testo').innerText = "In attesa di scansione...";
+        document.getElementById('rilevato-testo').innerText = "2/2 - Algoritmo sincronizzato. Aggancio hardware fotocamera...";
         
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        const videoElement = document.getElementById("webcam");
+        videoElement.srcObject = stream;
+        await videoElement.play();
+        
+        bottone.style.backgroundColor = "#2e7d32";
+        bottone.innerText = "SISTEMA AI OPERATIVO ✔";
+        document.getElementById('rilevato-testo').innerText = "Pronto. Inquadra un articolo reale della filiale.";
+        
+        // Avvia l'ascolto continuo ad intervallo rallentato (1 secondo) per dare tempo alle immagini di essere nitide
         setInterval(async () => {
             if (!bloccoAttivo && model && videoElement.readyState === videoElement.HAVE_CURRENT_DATA) {
                 const prediction = await model.predict(videoElement);
                 let migliorPredizione = { className: "", probability: 0 };
+                
                 for (let i = 0; i < maxPredictions; i++) {
                     if (prediction[i].probability > migliorPredizione.probability) {
                         migliorPredizione = prediction[i];
                     }
                 }
-                if (migliorPredizione.probability > 0.85 && migliorPredizione.className !== ultimoArticoloRilevato) {
-                    classeCorrenteRilevata = migliorPredizione.className;
-                    document.getElementById('rilevato-testo').innerText = classeCorrenteRilevata;
-                    document.getElementById('btn-conferma').style.display = "inline-block";
+                
+                // Entra in azione solo se la confidenza è superiore all'88% (Evita i falsi positivi casuali)
+                if (migliorPredizione.probability > 0.88 && migliorPredizione.className !== ultimoArticoloRilevato) {
+                    elaboraClasseBusiness(migliorPredizione.className);
                 }
             }
-        }, 400);
+        }, 1000);
     } catch (errore) {
         console.error(errore);
-        alert("Errore hardware webcam. Verifica i permessi browser.");
+        alert("Sincronizzazione Cloud fallita. Verifica che la pagina sia sotto protocollo HTTPS e che i permessi della webcam siano concessi.");
         bottone.disabled = false;
-        bottone.innerText = "ATTIVA INTELLIGENZA ARTIFICIALE";
+        bottone.style.backgroundColor = "#e53935";
+        bottone.innerText = "RIAVVIA SCANNER";
     }
-}
-
-function confermaEApplicaCheck() {
-    document.getElementById('btn-conferma').style.display = "none";
-    elaboraClasseBusiness(classeCorrenteRilevata);
 }
 
 function aggiungiAoScontrino(descrizione, modalita, prezzo) {
@@ -146,6 +132,7 @@ function aggiungiAoScontrino(descrizione, modalita, prezzo) {
 }
 function elaboraClasseBusiness(nomeClasse) {
     ultimoArticoloRilevato = nomeClasse;
+    const testoRilevato = document.getElementById('rilevato-testo');
     const alertCloud = document.getElementById('alert-cloud');
     const popupScelte = document.getElementById('popup-scelte');
     const contenitoreBottoni = document.getElementById('contenitore-bottoni');
@@ -154,6 +141,7 @@ function elaboraClasseBusiness(nomeClasse) {
     popupScelte.style.display = "none"; 
     contenitoreBottoni.innerHTML = "";
     
+    testoRilevato.innerText = "Rilevato: " + nomeClasse;
     const tag = nomeClasse.toLowerCase();
 
     if (tag.includes("toys") || tag.includes("lumache")) {
@@ -204,7 +192,7 @@ function elaboraClasseBusiness(nomeClasse) {
         bloccoAttivo = true; popupScelte.style.display = "block";
         contenitoreBottoni.innerHTML = `
             <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 1', 'Singolo', 1.00); sbloccaCassa();">Bottone 1 (1.00€/pz)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 1 (Blister 6pz)', 'Blister', 5.00); sbloccaCassa();">Blister Bottone 1 (5.00€)</button>
+            <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 1 (Blister)', 'Blister', 5.00); sbloccaCassa();">Blister Bottone 1 (5.00€)</button>
             <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 2', 'Singolo', 1.25); sbloccaCassa();">Bottone 2 (1.25€)</button>
             <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 3', 'Singolo', 0.75); sbloccaCassa();">Bottone 3 (0.75€)</button>
         `;
@@ -237,7 +225,7 @@ function sbloccaCassa() {
     setTimeout(() => { 
         bloccoAttivo = false; 
         ultimoArticoloRilevato = ""; 
-    }, 2000);
+    }, 3000); // 3 secondi di pausa per dare all'operatore il tempo di spostare l'articolo e non raddoppiare la lettura
 }
 </script>
 </body>
