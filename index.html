@@ -70,43 +70,72 @@ let totaleAttuale = 0, ultimoArticoloRilevato = "", bloccoAttivo = false;
 
 async function iniziaScansione() {
     const bottone = document.getElementById('btn-camera');
-    document.getElementById('rilevato-testo').innerText = "Caricamento modello AI...";
+    const videoElement = document.getElementById("webcam");
+    document.getElementById('rilevato-testo').innerText = "Caricamento modello AI e fotocamera...";
     bottone.disabled = true;
+
     try {
+        // 1. Carica il modello visivo da Google Cloud
         model = await tmImage.load(URL_MODELLO + "model.json", URL_MODELLO + "metadata.json");
         maxPredictions = model.getTotalClasses();
-        webcamCtx = new tmImage.Webcam(300, 300, false);
-        await webcamCtx.setup({ facingMode: "environment" }); 
-        await webcamCtx.play();
-        document.getElementById("webcam").srcObject = webcamCtx.stream;
+
+        // 2. Aggancio nativo della fotocamera posteriore (Risolve il blocco smartphone)
+        const vincoli = {
+            video: { 
+                facingMode: { ideal: "environment" },
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            },
+            audio: false
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(vincoli);
+        videoElement.srcObject = stream;
+        videoElement.setAttribute("playsinline", true); // Obbligatorio per iOS
+        videoElement.setAttribute("muted", true);
+        await videoElement.play();
+
+        // 3. Collega il flusso video a Teachable Machine
+        webcamCtx = { canvas: videoElement, update: function() {} };
+
         bottone.style.backgroundColor = "#2e7d32";
         bottone.innerText = "SCANNER IN ASCOLTO... ✔";
-        document.getElementById('rilevato-testo').innerText = "Inquadra una referenza.";
-        window.requestAnimationFrame(loop);
+        document.getElementById('rilevato-testo').innerText = "Inquadra una referenza (Tessuti, Filati, Bottoni).";
+
+        // 4. Avvia il ciclo continuo di lettura
+        avviaLoopLettura();
     } catch (errore) {
         console.error(errore);
-        alert("Errore di caricamento. Verifica HTTPS e permessi della fotocamera.");
+        alert("Sincronizzazione fallita. Verifica di essere su HTTPS e di aver concesso i permessi della fotocamera nel browser.");
         bottone.disabled = false;
         bottone.innerText = "RIAPRI SCANNER";
     }
 }
-async function loop() {
-    webcamCtx.update(); 
-    if (!bloccoAttivo) { await predict(); }
-    window.requestAnimationFrame(loop);
+
+function avviaLoopLettura() {
+    setInterval(async () => {
+        if (!bloccoAttivo && model) {
+            await predict();
+        }
+    }, 400); // Analizza l'immagine della telecamera ogni 400 millisecondi
 }
+
 async function predict() {
-    const prediction = await model.predict(webcamCtx.canvas);
-    let migliorPredizione = { className: "", probability: 0 };
-    for (let i = 0; i < maxPredictions; i++) {
-        if (prediction[i].probability > migliorPredizione.probability) {
-            migliorPredizione = prediction[i];
+    const videoElement = document.getElementById("webcam");
+    if (videoElement.readyState === videoElement.HAVE_CURRENT_DATA) {
+        const prediction = await model.predict(videoElement);
+        let migliorPredizione = { className: "", probability: 0 };
+        for (let i = 0; i < maxPredictions; i++) {
+            if (prediction[i].probability > migliorPredizione.probability) {
+                migliorPredizione = prediction[i];
+            }
+        }
+        if (migliorPredizione.probability > 0.85 && migliorPredizione.className !== ultimoArticoloRilevato) {
+            elaboraClasseBusiness(migliorPredizione.className);
         }
     }
-    if (migliorPredizione.probability > 0.85 && migliorPredizione.className !== ultimoArticoloRilevato) {
-        elaboraClasseBusiness(migliorPredizione.className);
-    }
 }
+
 function aggiungiAoScontrino(descrizione, modalita, prezzo) {
     const corpo = document.getElementById('corpo-scontrino');
     const rigaVuota = document.getElementById('riga-vuota');
@@ -117,6 +146,7 @@ function aggiungiAoScontrino(descrizione, modalita, prezzo) {
     totaleAttuale += prezzo;
     document.getElementById('totale-conto').innerText = totaleAttuale.toFixed(2);
 }
+
 function elaboraClasseBusiness(nomeClasse) {
     ultimoArticoloRilevato = nomeClasse;
     const testoRilevato = document.getElementById('rilevato-testo');
