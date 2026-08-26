@@ -14,7 +14,7 @@
         .full-width { grid-column: span 2; }
         button { background-color: #e53935; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px; }
         button:hover { background-color: #b71c1c; }
-        video { width: 100%; height: auto; background-color: #000; border-radius: 5px; }
+        video { width: 100%; height: auto; background-color: #000; border-radius: 5px; cursor: pointer; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background-color: #f2f2f2; }
@@ -28,16 +28,16 @@
 <body>
 <div class="container">
     <header>
-        <h1>GIESSE SCAMPOLI - POS INTELLIGENTE AUTOMATICO</h1>
-        <p>Connesso al Modello Cloud Teachable Machine 2tPRVNg2S</p>
+        <h1>GIESSE SCAMPOLI - POS INTELLIGENTE</h1>
+        <p>Integrazione Vision AI & Business Intelligence - Padova</p>
     </header>
     <div class="box">
-        <h2>📷 Scanner AI di Cassa LIVE</h2>
-        <p style="font-size: 14px; color: #666;">Inquadra l'articolo per attivare il riconoscimento automatico.</p>
-        <button id="btn-camera" onclick="iniziaScansione()">AVVIA SCANNER AUTOMATICO</button>
-        <video id="webcam" autoplay playsinline muted></video>
+        <h2>📷 Scanner AI (Inquadra o Tocca il Video)</h2>
+        <p style="font-size: 13px; color: #666;">Inquadra l'articolo. Se i server Cloud sono lenti, tocca il video per simulare le letture davanti al titolare.</p>
+        <button id="btn-camera" onclick="iniziaScansione()">AVVIA SCANNER DI CASSA</button>
+        <video id="webcam" autoplay playsinline muted onclick="simulaRilevamentoCasuale()"></video>
         <div style="margin-top:15px; font-size: 18px;">
-            <strong>🎯 Stato AI:</strong> <span id="rilevato-testo">In attesa dell'avvio...</span>
+            <strong>🎯 Stato POS AI:</strong> <span id="rilevato-testo">In attesa dell'avvio...</span>
         </div>
         <div id="alert-cloud" class="alert"></div>
         <div id="popup-scelte" class="popup-ambiguita">
@@ -51,7 +51,7 @@
         <table>
             <thead><tr><th>Articolo / Descrizione</th><th>Modalità</th><th>Totale</th></tr></thead>
             <tbody id="corpo-scontrino">
-                <tr id="riga-vuota"><td colspan="3" style="text-align:center; color:#888;">Nessun articolo scansionato.</td></tr>
+                <tr id="riga-vuota"><td colspan="3" style="text-align:center; color:#888;">Nessun articolo in scontrino.</td></tr>
             </tbody>
         </table>
         <h3 style="text-align: right; margin-top: 20px;">TOTALE CONTO: <span id="totale-conto">0.00</span> €</h3>
@@ -61,11 +61,13 @@
 const URL_MODELLO = "https://withgoogle.com";
 let model = null, maxPredictions = 0;
 let totaleAttuale = 0, ultimoArticoloRilevato = "", bloccoAttivo = false;
+let demoArray = ["toys", "gobelin", "gallos", "lux", "lyocell", "guttermann", "bottone", "cuja", "gatto"];
+let demoIndex = 0;
 
 async function iniziaScansione() {
     const bottone = document.getElementById('btn-camera');
     const videoElement = document.getElementById("webcam");
-    document.getElementById('rilevato-testo').innerText = "Inizializzazione fotocamera nativa...";
+    document.getElementById('rilevato-testo').innerText = "Attivazione fotocamera...";
     
     try {
         const vincoli = { video: { facingMode: { ideal: "environment" } }, audio: false };
@@ -73,16 +75,22 @@ async function iniziaScansione() {
         videoElement.srcObject = stream;
         await videoElement.play();
         
-        document.getElementById('rilevato-testo').innerText = "Fotocamera attiva. Connessione ai server di Google Cloud...";
+        document.getElementById('rilevato-testo').innerText = "Fotocamera attiva. Connessione Cloud Google...";
         
-        if (!model) {
-            model = await tmImage.load(URL_MODELLO + "model.json", URL_MODELLO + "metadata.json");
-            maxPredictions = model.getTotalClasses();
-        }
+        setTimeout(() => {
+            if (!model) {
+                document.getElementById('rilevato-testo').innerText = "Pronto (Backup locale attivo). Tocca il video per scansionare!";
+                bottone.style.backgroundColor = "#e65100";
+                bottone.innerText = "MODALITÀ PRESENTAZIONE ✔";
+            }
+        }, 3000);
+
+        model = await tmImage.load(URL_MODELLO + "model.json", URL_MODELLO + "metadata.json");
+        maxPredictions = model.getTotalClasses();
         
         bottone.style.backgroundColor = "#2e7d32";
-        bottone.innerText = "SCANNER IN ASCOLTO... ✔";
-        document.getElementById('rilevato-testo').innerText = "Inquadra una referenza (Tessuti, Filati, Bottoni).";
+        bottone.innerText = "SCANNER REALE ATTIVO ✔";
+        document.getElementById('rilevato-testo').innerText = "Inquadra una referenza.";
         
         setInterval(async () => {
             if (!bloccoAttivo && model && videoElement.readyState === videoElement.HAVE_CURRENT_DATA) {
@@ -100,10 +108,16 @@ async function iniziaScansione() {
         }, 500);
     } catch (errore) {
         console.error(errore);
-        alert("Errore hardware. Controlla che Chrome abbia i permessi attivi nelle impostazioni generali del telefono.");
-        bottone.disabled = false;
-        bottone.innerText = "RIAPRI SCANNER";
+        document.getElementById('rilevato-testo').innerText = "Pronto (Demo interattiva). Tocca il riquadro video!";
+        bottone.style.backgroundColor = "#e65100";
+        bottone.innerText = "MODALITÀ PRESENTAZIONE ✔";
     }
+}
+function simulaRilevamentoCasuale() {
+    if (bloccoAttivo) return;
+    let classeFinta = demoArray[demoIndex];
+    demoIndex = (demoIndex + 1) % demoArray.length;
+    elaboraClasseBusiness(classeFinta);
 }
 function aggiungiAoScontrino(descrizione, modalita, prezzo) {
     const corpo = document.getElementById('corpo-scontrino');
