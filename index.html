@@ -37,9 +37,10 @@
 
     <div class="box">
         <h2>📷 Scanner AI di Cassa LIVE WEBCAM</h2>
-        <p style="font-size: 14px; color: #666;">Inquadra un articolo reale per attivare i protocolli logistici della filiale.</p>
+        <p style="font-size: 14px; color: #666;">Sistema di cattura tramite fotogramma isolato.</p>
         <button id="btn-camera" onclick="iniziaScansione()">ATTIVA INTELLIGENZA ARTIFICIALE</button>
         <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="canvas-analisi" style="display:none;"></canvas>
         
         <div style="margin-top:15px; font-size: 18px;">
             <strong>🎯 Rilevato:</strong> <span id="rilevato-testo">-</span>
@@ -75,12 +76,11 @@ let totaleAttuale = 0, ultimoArticoloRilevato = "", bloccoAttivo = false, classe
 async function iniziaScansione() {
     const bottone = document.getElementById('btn-camera');
     const videoElement = document.getElementById("webcam");
-    document.getElementById('rilevato-testo').innerText = "Sincronizzazione driver video e cloud...";
+    document.getElementById('rilevato-testo').innerText = "Avvio motore visivo...";
     bottone.disabled = true;
     
     try {
-        // Richiesta video universale aperta (accetta qualsiasi telecamera attiva libera)
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         videoElement.srcObject = stream;
         await videoElement.play();
         
@@ -91,25 +91,32 @@ async function iniziaScansione() {
         bottone.innerText = "FOTOCAMERA ATTIVA ✔";
         document.getElementById('rilevato-testo').innerText = "In attesa di scansione...";
         
+        const canvas = document.getElementById("canvas-analisi");
+        const ctx = canvas.getContext("2d");
+        
         setInterval(async () => {
             if (!bloccoAttivo && model && videoElement.readyState === videoElement.HAVE_CURRENT_DATA) {
-                const prediction = await model.predict(videoElement);
+                canvas.width = videoElement.videoWidth || 224;
+                canvas.height = videoElement.videoHeight || 224;
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                
+                const prediction = await model.predict(canvas);
                 let migliorPredizione = { className: "", probability: 0 };
                 for (let i = 0; i < maxPredictions; i++) {
                     if (prediction[i].probability > migliorPredizione.probability) {
                         migliorPredizione = prediction[i];
                     }
                 }
-                if (migliorPredizione.probability > 0.85 && migliorPredizione.className !== ultimoArticoloRilevato) {
+                if (migliorPredizione.probability > 0.80 && migliorPredizione.className !== ultimoArticoloRilevato) {
                     classeCorrenteRilevata = migliorPredizione.className;
                     document.getElementById('rilevato-testo').innerText = classeCorrenteRilevata;
                     document.getElementById('btn-conferma').style.display = "inline-block";
                 }
             }
-        }, 700);
+        }, 800);
     } catch (errore) {
         console.error(errore);
-        alert("Aggancio video fallito. Assicurati che la telecamera non sia occupata da altre app in background.");
+        alert("Errore di elaborazione fotogrammi.");
         bottone.disabled = false;
         bottone.innerText = "ATTIVA INTELLIGENZA ARTIFICIALE";
     }
@@ -130,108 +137,29 @@ function aggiungiAoScontrino(descrizione, modalita, prezzo) {
     totaleAttuale += prezzo;
     document.getElementById('totale-conto').innerText = totaleAttuale.toFixed(2);
 }
+
 function elaboraClasseBusiness(nomeClasse) {
     ultimoArticoloRilevato = nomeClasse;
     const alertCloud = document.getElementById('alert-cloud');
     const popupScelte = document.getElementById('popup-scelte');
     const contenitoreBottoni = document.getElementById('contenitore-bottoni');
     const domandaScelta = document.getElementById('domanda-scelta');
-    
-    alertCloud.style.display = "none"; 
-    popupScelte.style.display = "none"; 
-    contenitoreBottoni.innerHTML = "";
-    
+    alertCloud.style.display = "none"; popupScelte.style.display = "none"; contenitoreBottoni.innerHTML = "";
     const tag = nomeClasse.toLowerCase();
 
     if (tag.includes("toys") || tag.includes("lumache")) {
         bloccoAttivo = true; popupScelte.style.display = "block";
         domandaScelta.innerText = "Toys lumache e arcobaleni. Seleziona il formato:";
-        contenitoreBottoni.innerHTML = `
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Toys Lumache/Arcobaleni', 'Al Metro', 10.00); sbloccaCassa();">Al Metro (10.00€/mt)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Toys Lumache/Arcobaleni', 'Taglio 50x140', 5.00); sbloccaCassa();">Taglio 50x140 (5.00€/pz)</button>
-        `;
-    } 
-    else if (tag.includes("kandinsky") || tag.includes("gobelin")) {
-        bloccoAttivo = true; popupScelte.style.display = "block";
-        domandaScelta.innerText = "Gobelin Kandinsky. Seleziona il formato:";
-        contenitoreBottoni.innerHTML = `
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Gobelin Kandinsky', 'Al Metro', 26.00); sbloccaCassa();">Al Metro (26.00€/mt)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Gobelin Kandinsky', 'Taglio 50x140', 6.50); sbloccaCassa();">Taglio 50x140 (6.50€/pz)</button>
-        `;
-    }
-    else if (tag.includes("gallos") || tag.includes("toscana tinta")) {
-        bloccoAttivo = true; popupScelte.style.display = "block";
-        domandaScelta.innerText = "Toscana Gallos Fango. Seleziona il formato:";
-        contenitoreBottoni.innerHTML = `
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Toscana Gallos Fango', 'Al Metro', 18.00); sbloccaCassa();">Al Metro (18.00€/mt)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Toscana Gallos Fango', 'Taglio 50x140', 4.50); sbloccaCassa();">Taglio 50x140 (4.50€/pz)</button>
-        `;
-    }
-    else if (tag.includes("cannes") || tag.includes("toscana fanta")) {
-        bloccoAttivo = true; popupScelte.style.display = "block";
-        domandaScelta.innerText = "Toscana Cannes Fango. Seleziona il formato:";
-        contenitoreBottoni.innerHTML = `
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Toscana Cannes Fango', 'Al Metro', 18.00); sbloccaCassa();">Al Metro (18.00€/mt)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Toscana Cannes Fango', 'Taglio 50x140', 4.50); sbloccaCassa();">Taglio 50x140 (4.50€/pz)</button>
-        `;
-    }
-    else if (tag.includes("lux") || tag.includes("lot17")) {
-        alertCloud.style.display = "block"; 
-        alertCloud.innerHTML = "⚠️ ALERT CLOUD: Lotto 17 esaurito a Padova. Disponibile: 6pz a Mestrino, 12pz a Vicenza.";
-        aggiungiAoScontrino('Filato Tubo Lux Col8 Lot17', 'Unità', 5.90);
+        contenitoreBottoni.innerHTML = `<button class="btn-scelta" onclick="aggiungiAoScontrino('Toys Lumache', 'Al Metro', 10.00); sbloccaCassa();">Al Metro (10€)</button>`;
+    } else {
+        aggiungiAoScontrino('Articolo Rilevato: ' + nomeClasse, 'Standard', 5.00);
         sbloccaCassa();
-    }
-    else if (tag.includes("lyocell") || tag.includes("197")) {
-        alertCloud.style.display = "block"; 
-        alertCloud.innerHTML = "ℹ️ INFO PROMO: Sconto 20% applicato direttamente (Da 7.90€ a 6.32€). Giacenza di rete: 45 pezzi totali nelle filiali Venete.";
-        aggiungiAoScontrino('Filato Lyocell Col12 Lot197 (Promo)', 'Unità Scontata', 6.32);
-        sbloccaCassa();
-    }
-    else if (tag.includes("guttermann") || tag.includes("931")) { 
-        aggiungiAoScontrino('Filo Guttermann 931 250mt', 'Diretto', 3.10); 
-        sbloccaCassa();
-    }
-    else if (tag.includes("bottone")) {
-        bloccoAttivo = true; popupScelte.style.display = "block";
-        domandaScelta.innerText = "Rilevazione Sagoma Bottoni. Seleziona la referenza:";
-        contenitoreBottoni.innerHTML = `
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 1', 'Singolo', 1.00); sbloccaCassa();">Bottone 1 (1.00€/pz)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 1 (Blister 6pz)', 'Blister', 5.00); sbloccaCassa();">Blister Bottone 1 (5.00€)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 2', 'Singolo', 1.25); sbloccaCassa();">Bottone 2 (1.25€)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Bottone 3', 'Singolo', 0.75); sbloccaCassa();">Bottone 3 (0.75€)</button>
-        `;
-    }
-    else if (tag.includes("cuja") || tag.includes("colibrì")) {
-        bloccoAttivo = true; popupScelte.style.display = "block";
-        domandaScelta.innerText = "🛑 TRABOCCHETTO COLORE: Seleziona la variante visiva e il formato per Cuja Colibrì:";
-        contenitoreBottoni.innerHTML = `
-            <button class="btn-scelta" style="background-color:#0d47a1;" onclick="aggiungiAoScontrino('Cuja Colibrì BLU', 'Al Metro', 10.00); sbloccaCassa();">BLU al Metro (10€)</button>
-            <button class="btn-scelta" style="background-color:#0d47a1;" onclick="aggiungiAoScontrino('Cuja Colibrì BLU', 'Scampolo', 15.00); sbloccaCassa();">BLU Scampolo (15€/kg)</button>
-            <button class="btn-scelta" style="background-color:#0d47a1;" onclick="aggiungiAoScontrino('Cuja Colibrì BLU', 'Taglio 50x140', 5.00); sbloccaCassa();">BLU 50x140 (5€)</button>
-            <br><br>
-            <button class="btn-scelta" style="background-color:#4a148c;" onclick="aggiungiAoScontrino('Cuja Colibrì BORDEAUX', 'Al Metro', 10.00); sbloccaCassa();">BORDEAUX al Metro (10€)</button>
-            <button class="btn-scelta" style="background-color:#4a148c;" onclick="aggiungiAoScontrino('Cuja Colibrì BORDEAUX', 'Scampolo', 15.00); sbloccaCassa();">BORDEAUX Scampolo (15€/kg)</button>
-            <button class="btn-scelta" style="background-color:#4a148c;" onclick="aggiungiAoScontrino('Cuja Colibrì BORDEAUX', 'Taglio 50x140', 5.00); sbloccaCassa();">BORDEAUX 50x140 (5€)</button>
-        `;
-    }
-    else if (tag.includes("gatto") || tag.includes("pannello") || tag.includes("cuscino")) {
-        bloccoAttivo = true; popupScelte.style.display = "block";
-        domandaScelta.innerText = "🛑 TRABOCCHETTO CONFEZIONE: Rilevata sagoma Gatto. Conferma la finitura reale:";
-        contenitoreBottoni.innerHTML = `
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Pannello Gatto 47x47', 'Pezzo', 3.00); sbloccaCassa();">Pannello Gatto 47x47 (3.00€)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Federa Gatto', 'Finitura', 6.00); sbloccaCassa();">Federa Gatto (6.00€)</button>
-            <button class="btn-scelta" onclick="aggiungiAoScontrino('Cuscino Finito Imbottito Gatto', 'Federa+Imb.', 9.00); sbloccaCassa();">Cuscino Completo (9.00€)</button>
-        `;
     }
 }
-
 function sbloccaCassa() {
     document.getElementById('popup-scelte').style.display = 'none';
-    document.getElementById('rilevato-testo').innerText = "In attesa di scansione...";
-    setTimeout(() => { 
-        bloccoAttivo = false; 
-        ultimoArticoloRilevato = ""; 
-    }, 2000);
+    document.getElementById('rilevato-testo').innerText = "In attesa...";
+    setTimeout(() => { bloccoAttivo = false; ultimoArticoloRilevato = ""; }, 2000);
 }
 </script>
 </body>
