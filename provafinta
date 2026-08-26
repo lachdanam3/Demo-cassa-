@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giesse Scampoli - POS AI Presentazione</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        header { grid-column: span 2; background-color: #a81c1c; color: white; padding: 15px; border-radius: 8px; text-align: center; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .full-width { grid-column: span 2; }
+        button { background-color: #e53935; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px; }
+        button:hover { background-color: #b71c1c; }
+        video { width: 100%; height: auto; background-color: #000; border-radius: 5px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .alert { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; border-radius: 4px; margin-top: 10px; font-weight: bold; display: none; }
+        .popup-ambiguita { display: none; background-color: #e8f5e9; border-left: 5px solid #2e7d32; padding: 15px; border-radius: 4px; margin-top: 10px; }
+        .btn-scelta { background-color: #2e7d32; display: inline-block; width: auto; margin-right: 10px; margin-top: 10px; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .btn-scelta:hover { background-color: #1b5e20; }
+        .badge { background: #3f51b5; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>GIESSE SCAMPOLI - POS INTELLIGENTE</h1>
+        <p>Integrazione Sperimentale AI & Business Intelligence - Filiale di Padova</p>
+    </header>
+    <div class="box">
+        <h2>📷 Video Scanner (Tocca il riquadro per scansionare)</h2>
+        <p style="font-size: 13px; color: #666;">Avvia lo scontrino e, mentre inquadri i prodotti davanti al titolare, <strong>tocca direttamente l'immagine video</strong> per simulare il passaggio in cassa dei vari articoli.</p>
+        <button id="btn-camera" onclick="iniziaScansione()">ATTIVA PROTOCORRE CASSA AI</button>
+        <video id="webcam" autoplay playsinline muted onclick="simulaRilevamento()"></video>
+        <div style="margin-top:15px; font-size: 18px;">
+            <strong>🎯 Stato AI:</strong> <span id="rilevato-testo">In attesa dell'avvio...</span>
+        </div>
+        <div id="alert-cloud" class="alert"></div>
+        <div id="popup-scelte" class="popup-ambiguita">
+            <h3 style="margin-top:0;">Risoluzione Ambiguità AI</h3>
+            <p id="domanda-scelta"></p>
+            <div id="contenitore-bottoni"></div>
+        </div>
+    </div>
+    <div class="box">
+        <h2>🧾 Scontrino Virtuale 2bit</h2>
+        <table>
+            <thead><tr><th>Articolo / Descrizione</th><th>Modalità</th><th>Totale</th></tr></thead>
+            <tbody id="corpo-scontrino">
+                <tr id="riga-vuota"><td colspan="3" style="text-align:center; color:#888;">Nessun articolo in scontrino. Tocca il video sopra per inserire.</td></tr>
+            </tbody>
+        </table>
+        <h3 style="text-align: right; margin-top: 20px;">TOTALE CONTO: <span id="totale-conto">0.00</span> €</h3>
+    </div>
+</div>
+<script>
+let totaleAttuale = 0, bloccoAttivo = false;
+let demoArray = ["toys", "gobelin", "gallos", "cannes", "lux", "lyocell", "guttermann", "bottone", "cuja", "gatto"];
+let demoIndex = 0;
+
+async function iniziaScansione() {
+    const bottone = document.getElementById('btn-camera');
+    const videoElement = document.getElementById("webcam");
+    try {
+        const vincoli = { video: { facingMode: { ideal: "environment" } }, audio: false };
+        const stream = await navigator.mediaDevices.getUserMedia(vincoli);
+        videoElement.srcObject = stream;
+        await videoElement.play();
+        document.getElementById('rilevato-testo').innerText = "PRONTO PER IL COLLOQUIO. Inquadra un prodotto e TOCCA IL VIDEO per registrarlo.";
+        bottone.style.backgroundColor = "#e65100";
+        bottone.innerText = "MODALITÀ PRESENTAZIONE INTERATTIVA ✔";
+    } catch (errore) {
+        document.getElementById('rilevato-testo').innerText = "PRONTO (Demo Manuale). Clicca sul riquadro nero per simulare.";
+        bottone.style.backgroundColor = "#e65100";
+        bottone.innerText = "MODALITÀ PRESENTAZIONE INTERATTIVA ✔";
+    }
+}
+function simulaRilevamento() {
+    if (bloccoAttivo) return;
+    let classeFinta = demoArray[demoIndex];
+    demoIndex = (demoIndex + 1) % demoArray.length;
+    elaboraClasseBusiness(classeFinta);
+}
+function aggiungiAoScontrino(descrizione, modalita, prezzo) {
+    const corpo = document.getElementById('corpo-scontrino');
+    const rigaVuota = document.getElementById('riga-vuota');
+    if(rigaVuota) rigaVuota.remove();
+    const nuovaRiga = document.createElement('tr');
+    nuovaRiga.innerHTML = `<td>${descrizione}</td><td><span class="badge">${modalita}</span></td><td>${prezzo.toFixed(2)} €</td>`;
+    corpo.appendChild(nuovaRiga);
+    totaleAttuale += prezzo;
+    document.getElementById('totale-conto').innerText = totaleAttuale.toFixed(2);
+}
+function elaboraClasseBusiness(tag) {
+    const testoRilevato = document.getElementById('rilevato-testo');
+    const alertCloud = document.getElementById('alert-cloud');
+    const popupScelte = document.getElementById('popup-scelte');
+    const contenitoreBottoni = document.getElementById('contenitore-bottoni');
+    const domandaScelta = document.getElementById('domanda-scelta');
+    alertCloud.style.display = "none"; popupScelte.style.display = "none"; contenitoreBottoni.innerHTML = "";
+
+    if (tag === "toys") {
+        testoRilevato.innerText = "Rilevato: Toys lumache e arcobaleni"; bloccoAttivo = true; popupScelte.style.display = "block";
+        domandaScelta.innerText = "Seleziona la modalità di vendita per Tessuto Bimbi Premium:";
+        contenitoreBottoni.innerHTML = `<button class="btn-scelta" onclick="aggiungiAoScontrino('Tessuto Bimbi Premium', 'Al Metro', 14.50); sbloccaCassa();">Vendita al Metro</button><button class="btn-scelta" onclick="aggiungiAoScontrino('Tessuto Bimbi Premium', 'Cesta Outlet', 5.00); sbloccaCassa();">Peso Cesta Outlet</button>`;
+    } 
+    else if (tag === "gobelin") {
+        testoRilevato.innerText = "Rilevato: Gobelin Kandinsky"; bloccoAttivo = true; popupScelte.style.display = "block";
+        domandaScelta.innerText = "Seleziona la modalità di vendita per Tessuto Arredo Artistico:";
+        contenitoreBottoni.innerHTML = `<button class="btn-scelta" onclick="aggiungiAoScontrino('Gobelin Arredo Artistico', 'Al Metro', 22.00); sbloccaCassa();">Vendita al Metro</button><button class="btn-scelta" onclick="aggiungiAoScontrino('Gobelin Arredo Artistico', 'Cesta Outlet', 8.50); sbloccaCassa();">Peso Cesta Outlet</button>`;
+    }
+    else if (tag === "gallos") { testoRilevato.innerText = "Rilevato: Toscana gallos fango"; aggiungiAoScontrino('Tessuto Tinta Unita (Toscana)', 'Al Metro', 12.00); }
+    else if (tag === "cannes") { testoRilevato.innerText = "Rilevato: Toscana cannes fango"; aggiungiAoScontrino('Tessuto Fantasia (Cannes)', 'Al Metro', 13.50); }
+    else if (tag === "lux") {
+        testoRilevato.innerText = "Rilevato: Filato tubo lux col8 lot17"; alertCloud.style.display = "block"; 
+        alertCloud.innerHTML = "⚠️ ALERT CLOUD: Lotto 17 esaurito a Padova. Disponibile: 6pz a Mestrino, 12pz a Vicenza.";
+        aggiungiAoScontrino('Filato Tubo Lux Col8 Lot17', 'Unità', 4.80);
+    }
+    else if (tag === "lyocell") {
+        testoRilevato.innerText = "Rilevato: Filato lyocell col 12 lot 197"; alertCloud.style.display = "block"; 
+        alertCloud.innerHTML = "ℹ️ INFO RETE: Disponibilità rete: 45 pezzi totali nelle filiali Venete.";
+        aggiungiAoScontrino('Filato Lyocell Col12 Lot197', 'Unità', 5.20);
+    }
+    else if (tag === "guttermann") { testoRilevato.innerText = "Rilevato: Filo 250mt guttermann 931"; aggiungiAoScontrino('Filo Guttermann 931 250mt', 'Diretto', 3.10); }
+    else if (tag === "bottone") { testoRilevato.innerText = "Rilevato: Bottone Tipo 1 (Sagoma)"; aggiungiAoScontrino('Bottone Riconoscimento Geometrico', 'Unitario', 0.60); }
+    else if (tag === "cuja") {
+        testoRilevato.innerText = "Rilevato: Cuja colibrì blu o bordeaux"; bloccoAttivo = true; popupScelte.style.display = "block";
+        domandaScelta.innerText = "🛑 TRABOCCHETTO COLORE: Il sistema richiede il Check Umano obbligatorio. Seleziona la variante visiva corrente:";
+        contenitoreBottoni.innerHTML = `<button class="btn-scelta" style="background-color:#0d47a1;" onclick="aggiungiAoScontrino('Cuja Colibrì - Variante Blu', 'Manuale', 18.00); sbloccaCassa();">Variante BLU</button><button class="btn-scelta" style="background-color:#4a148c;" onclick="aggiungiAoScontrino('Cuja Colibrì - Variante Bordeaux', 'Manuale', 18.00); sbloccaCassa();">Variante BORDEAUX</button>`;
+    }
+    else if (tag === "gatto") {
+        testoRilevato.innerText = "Rilevato: Articolo Tema Gatto"; bloccoAttivo = true; popupScelte.style.display = "block";
+        domandaScelta.innerText = "🛑 TRABOCCHETTO CONFEZIONE: Seleziona l'articolo corretto passato in cassa:";
+        contenitoreBottoni.innerHTML = `<button class="btn-scelta" onclick="aggiungiAoScontrino('Pannello Gatto a Metro', 'Taglio', 12.00); sbloccaCassa();">Pannello a Metro (12.00€)</button><button class="btn-scelta" onclick="aggiungiAoScontrino('Cuscino Finito Imbottito Gatto', 'Finito', 22.00); sbloccaCassa();">Cuscino Finito Imbottito (22.00€)</button>`;
+    }
+}
+function sbloccaCassa() {
+    document.getElementById('popup-scelte').style.display = 'none';
+    setTimeout(() => { bloccoAttivo = false; }, 500);
+}
+</script>
+</body>
+</html>
